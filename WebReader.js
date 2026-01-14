@@ -32,17 +32,44 @@ let pagesData = [];
 let VIEW_HEIGHT = 0;
 
 // [수정] 글자 수가 아닌 '줄 수' 기준으로 분할하여 짤림 방지
+// function splitTextByChunk() {
+//     pagesData = [];
+//     const lines = fullText.split('\n'); // 전체 텍스트를 줄 단위로 분리
+//     const LINES_PER_PAGE = 20; // 한 페이지에 표시할 적정 줄 수 (화면 크기에 따라 조절)
+
+//     for (let i = 0; i < lines.length; i += LINES_PER_PAGE) {
+//         // 지정된 줄 수만큼 잘라서 합침
+//         const chunk = lines.slice(i, i + LINES_PER_PAGE).join('\n');
+//         pagesData.push(chunk);
+//     }
+//     el.totalPage.textContent = pagesData.length;
+// }
+
 function splitTextByChunk() {
     pagesData = [];
-    const lines = fullText.split('\n'); // 전체 텍스트를 줄 단위로 분리
-    const LINES_PER_PAGE = 20; // 한 페이지에 표시할 적정 줄 수 (화면 크기에 따라 조절)
+    const lines = fullText.split('\n');
+    
+    // 1. 가용 높이 계산 (패딩 및 마진 고려하여 더 넉넉하게 제외)
+    const safetyMargin = 250; 
+    const availableHeight = el.contentArea.clientHeight - safetyMargin;
+    
+    // 2. 줄당 높이 계산 (style.css의 1.3rem * 1.6 반영)
+    const fontSize = parseFloat(getComputedStyle(el.display).fontSize);
+    const lineHeight = fontSize * 1.6; 
+    
+    // 3. 줄 수 계산 (가용 높이의 75%만 텍스트 영역으로 할당하여 20줄 내외 유도)
+    let autoLinesPerPage = Math.floor((availableHeight * 0.75) / lineHeight);
+    
+    // 4. 최종 안전 장치: 계산값이 커지더라도 최대 22줄을 넘지 않도록 제한
+    const safeLines = Math.min(Math.max(1, autoLinesPerPage), 22);
 
-    for (let i = 0; i < lines.length; i += LINES_PER_PAGE) {
-        // 지정된 줄 수만큼 잘라서 합침
-        const chunk = lines.slice(i, i + LINES_PER_PAGE).join('\n');
+    for (let i = 0; i < lines.length; i += safeLines) {
+        const chunk = lines.slice(i, i + safeLines).join('\n');
         pagesData.push(chunk);
     }
+    
     el.totalPage.textContent = pagesData.length;
+    console.log(`[안전 최적화] 계산: ${autoLinesPerPage}줄 -> 최종 확정: ${safeLines}줄`);
 }
 
 // [변경] 모든 페이지를 만들지 않고 "필요한 틀"만 만듭니다.
