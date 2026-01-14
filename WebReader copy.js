@@ -12,16 +12,10 @@ const el = {
     currentPage: document.getElementById('currentPage'),
     totalPage: document.getElementById('totalPage'),
     contentArea: document.querySelector('.content-area'),
-
-    // 북 마크 저장, 로드
     saveBookMarkBtn: document.getElementById('saveBookMarkBtn'),
     loadBookMarkBtn: document.getElementById('loadBookMarkBtn'),
-
-    // alert 커스텀
     toast: document.getElementById('toastContainer'),
     loadedFileName: document.getElementById('loadedFileName'),
-
-    // 진행바 표시 요소: 컨테이너, 바, 백분율
     progressContainer: document.getElementById('progressContainer'),
     progressBar: document.getElementById('progressBar'),
     progressPercent: document.getElementById('progressPercent')
@@ -31,56 +25,57 @@ let fullText = "";
 let pagesData = [];
 let VIEW_HEIGHT = 0;
 
-// [최적화] DOM 측정을 하지 않고 문자열을 즉시 자르는 방식 (0.1초 미만)
+// [최적화] CPU 연산만 사용하는 고속 청크 분할
 function splitTextByChunk() {
     pagesData = [];
-    const CHUNK_SIZE = 1000; // 가독성 기준 약 8천 자
+    // 약 8000자 단위 분할 (가독성과 성능의 균형)
+    const CHUNK_SIZE = 8000; 
     for (let i = 0; i < fullText.length; i += CHUNK_SIZE) {
         pagesData.push(fullText.slice(i, i + CHUNK_SIZE));
     }
     el.totalPage.textContent = pagesData.length;
 }
 
-// [변경] 모든 페이지를 만들지 않고 "필요한 틀"만 만듭니다.
+// [최적화] 빈 프레임만 먼저 생성하여 렌더링 지연 차단
+// [수정] renderVirtualPages: 초기 성능 극대화 버전
 function renderVirtualPages() {
     el.display.textContent = "";
     const fragment = document.createDocumentFragment();
     
-    // 핵심 최적화: 4MB 파일이 500페이지라면, 초기에는 상단 10페이지만 생성
-    // 나머지는 빈 공간(Spacer)으로 처리하거나 순차적 생성
-    const totalCount = pagesData.length;
+    // 전체를 다 만들지 않고, 일단 20개만 먼저 만듭니다. (병목 해결 핵심)
+    const initialRenderCount = Math.min(pagesData.length, 20);
     
-    for (let i = 0; i < totalCount; i++) {
+    for (let i = 0; i < pagesData.length; i++) {
         const frame = document.createElement('div');
         frame.className = 'page-frame';
         frame.dataset.index = i;
-        frame.style.height = VIEW_HEIGHT + "px"; // style.css의 설정과 연동
+        frame.style.height = VIEW_HEIGHT + "px";
         
-        // 초기 10페이지만 즉시 렌더링 (7초 지연의 주범인 대량 생성을 방지)
-        if (i < 10) {
+        // 초기 로딩 시에는 상단 일부 페이지만 텍스트와 관찰자 등록
+        if (i < initialRenderCount) {
             frame.textContent = pagesData[i];
             pageObserver.observe(frame);
-        } else {
-            // 나머지는 스크롤이 근처에 올 때까지 관찰 보류 (Lazy Loading)
-            lazyLoadObserver.observe(frame);
         }
         
         fragment.appendChild(frame);
     }
     el.display.appendChild(fragment);
-    el.totalPage.textContent = totalCount;
+    el.totalPage.textContent = pagesData.length;
 }
 
-// [추가] 멀리 있는 페이지를 위한 2차 관찰자
-const lazyLoadObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            pageObserver.observe(entry.target); // 실제 텍스트 주입 관찰자로 인계
-            lazyLoadObserver.unobserve(entry.target);
+// [수정] 스크롤 시 동적으로 관찰 대상 추가 (나머지 페이지용)
+el.contentArea.onscroll = () => {
+    const frames = el.display.querySelectorAll('.page-frame:not([data-observed])');
+    frames.forEach(frame => {
+        const rect = frame.getBoundingClientRect();
+        if (rect.top < window.innerHeight * 2) { // 근처에 오면 관찰 시작
+            pageObserver.observe(frame);
+            frame.setAttribute('data-observed', 'true');
         }
     });
-}, { root: el.contentArea, rootMargin: '1000px' }); // 1000px 근처에 오면 미리 준비
+};
 
+// 교차 관찰자: 화면에 보일 때만 텍스트 주입
 const pageObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -89,12 +84,11 @@ const pageObserver = new IntersectionObserver((entries) => {
             el.currentPage.textContent = idx + 1;
         }
     });
-}, { root: el.contentArea, threshold: 0.5 });
+}, { root: el.contentArea, threshold: 0.1 });
 
-// 이벤트 핸들러
+// 파일 로드 핸들러
 el.loadBtn.onclick = () => el.fileInput.click();
 
-// [수정] 파일 로드 핸들러
 el.fileInput.onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -107,23 +101,24 @@ el.fileInput.onchange = (e) => {
     reader.onload = (ev) => {
         fullText = ev.target.result;
         
-        // 병목이었던 splitTextByHeight() 대신 아래 함수 실행
         splitTextByChunk(); 
         renderVirtualPages();
         
         el.contentArea.scrollTop = 0;
         const duration = (performance.now() - startTime).toFixed(2);
-        console.log(`[최적화 완료] 로딩 시간: ${duration}ms`);
+        console.log(`[최적화 결과] 로딩 시간: ${duration}ms`);
     };
     reader.readAsText(file, 'UTF-8');
     e.target.value = "";
 };
 
+// 페이지 이동 (VIEW_HEIGHT 기반 정밀 이동)
 el.firstBtn.onclick = () => el.contentArea.scrollTo({ top: 0, behavior: 'instant' });
 el.lastBtn.onclick = () => el.contentArea.scrollTo({ top: el.contentArea.scrollHeight, behavior: 'instant' });
-el.nextBtn.onclick = () => el.contentArea.scrollBy({ top: VIEW_HEIGHT + 100, behavior: 'instant' });
-el.prevBtn.onclick = () => el.contentArea.scrollBy({ top: -(VIEW_HEIGHT + 100), behavior: 'instant' });
+el.nextBtn.onclick = () => el.contentArea.scrollBy({ top: VIEW_HEIGHT, behavior: 'instant' });
+el.prevBtn.onclick = () => el.contentArea.scrollBy({ top: -VIEW_HEIGHT, behavior: 'instant' });
 
+// 테마 및 TTS 기능
 el.themeToggle.onclick = () => {
     const current = document.documentElement.getAttribute('data-theme');
     document.documentElement.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
@@ -139,71 +134,34 @@ el.speakButton.onclick = () => {
 
 el.stopButton.onclick = () => window.speechSynthesis.cancel();
 
-/**
- * 토스트 알림 표시 함수
- * @param {string} message - 표시할 메시지
- * @param {string} type - 'success' 또는 'error'
- */
 function showToast(message, type = 'success') {
-    // 기존 클래스 초기화
-    el.toast.className = 'toast';
-    
-    // 타입에 따른 클래스 추가 (toast-success 또는 toast-error)
-    el.toast.classList.add(`toast-${type}`);
+    el.toast.className = `toast toast-${type}`;
     el.toast.textContent = message;
-
-    // 표시 (toast-hidden 제거)
     el.toast.classList.remove('toast-hidden');
-
-    // 3초 후 다시 숨김
-    setTimeout(() => {
-        el.toast.classList.add('toast-hidden');
-    }, 3000);
+    setTimeout(() => el.toast.classList.add('toast-hidden'), 3000);
 }
 
-// 현재 읽던 위치 저장
+// 책갈피 기능
 el.saveBookMarkBtn.onclick = () => {
-    if (fullText.length === 0) {
-        showToast("파일을 먼저 불러와주세요.", "error");
-        return;
-    }
-
+    if (!fullText) return showToast("파일을 먼저 불러와주세요.", "error");
     const bookmark = {
         fileName: el.loadedFileName.textContent,
         scrollTop: el.contentArea.scrollTop,
-        timestamp: new Date().getTime()
+        timestamp: Date.now()
     };
-
     localStorage.setItem('webReader_bookmark', JSON.stringify(bookmark));
-    showToast("책갈피가 저장되었습니다.", "success");
+    showToast("책갈피가 저장되었습니다.");
 };
 
-// 저장된 위치 불러오기
 el.loadBookMarkBtn.onclick = () => {
     const savedData = localStorage.getItem('webReader_bookmark');
-
-    if (!savedData) {
-        showToast("저장된 책갈피가 없습니다.", "error");
-        return;
-    }
+    if (!savedData) return showToast("저장된 책갈피가 없습니다.", "error");
 
     const bookmark = JSON.parse(savedData);
-    const currentFileName = el.loadedFileName.textContent;
-
-    if (currentFileName === "파일 없음" || !fullText) {
-        showToast("파일을 먼저 불러와 주세요.", "error");
-        return;
-    }
-
-    // 현재 열린 파일과 저장된 파일명이 다를 경우 경고
     if (bookmark.fileName !== el.loadedFileName.textContent) {
-        showToast("현재 파일과 저장된 책갈피의 파일이 다릅니다.", "error");
-        return;
+        return showToast("현재 파일과 저장된 파일이 다릅니다.", "error");
     }
 
-    el.contentArea.scrollTo({
-        top: bookmark.scrollTop,
-        behavior: 'smooth'
-    });
-    showToast("저장된 위치로 이동했습니다.", "success");
+    el.contentArea.scrollTo({ top: bookmark.scrollTop, behavior: 'smooth' });
+    showToast("위치를 복구했습니다.");
 };

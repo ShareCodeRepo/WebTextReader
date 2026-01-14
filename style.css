@@ -182,18 +182,28 @@ html {
     opacity: 0;
 }
 
-/* 기존 스타일에 아래 내용 추가/수정 */
-
-/* 페이지 하나의 크기를 화면에 맞춤 */
+/* ====================================================================
+   페이지 프레임 스타일
+=======================================================================*/
 .page-frame {
     width: 100%;
     min-height: calc(100vh - 120px);
-    /* 패딩 제외 높이 */
     margin-bottom: 100px;
     white-space: pre-wrap;
     word-break: break-all;
-    /* 내용이 로드되기 전에도 높이 유지 */
     contain: layout;
+}
+
+.page-frame {
+    width: 100%;
+    height: calc(100vh - 120px);
+    /* min-height 대신 고정 height 권장 */
+    margin-bottom: 100px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    contain: strict;
+    /* 레이아웃 격리로 렌더링 속도 비약적 향상 */
+    overflow: hidden;
 }
 
 /* Toast Notification */
