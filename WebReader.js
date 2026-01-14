@@ -238,3 +238,21 @@ el.loadBookMarkBtn.onclick = () => {
     });
     showToast("저장된 위치로 이동했습니다.", "success");
 };
+
+// [복구] 브라우저 크기 변경 시 레이아웃 실시간 재계산
+window.onresize = () => {
+    if (!fullText) return;
+
+    // 1. 현재 본문 영역 높이 재측정
+    VIEW_HEIGHT = el.contentArea.clientHeight - 120;
+
+    // 2. 바뀐 높이에 맞춰 줄 수 및 페이지 데이터 재생성
+    splitTextByChunk();
+    
+    // 3. 가상 페이지 틀 재렌더링
+    renderVirtualPages();
+
+    // 4. (선택) 페이지 중간에서 리사이즈 시 위치 유지를 위해 최상단 이동 또는 알림
+    el.contentArea.scrollTop = 0;
+    showToast("화면 크기에 맞춰 페이지를 재설정했습니다.", "success");
+};
