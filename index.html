@@ -11,36 +11,48 @@
 <body>
     <div class="app-wrapper">
         <nav class="sidebar">
-            <div class="brand">Reader<span>.io</span></div>
+            <div class="brand">Web Text Reader</div>
 
             <div class="nav-section">
-                <label class="section-title">File</label>
-                <input type="file" id="fileInput" accept=".txt" hidden>
+                <div id="loadedFileName" class="sidebar-filename">파일 없음</div> <input type="file" id="fileInput" accept=".txt"
+                    hidden>
                 <button id="loadBtn" type="button" class="btn-sidebar btn-primary">파일 불러오기</button>
             </div>
+            
+            <div class="nav-divider"></div>
 
             <div class="nav-section">
-                <label class="section-title">Control</label>
-                <button id="speakButton" type="button" class="btn-sidebar">읽기 시작</button>
-                <button id="stopButton" type="button" class="btn-sidebar btn-danger">정지</button>
+                <label class="section-title">텍스트 읽기</label>
+                <div class="control-group"> 
+                    <button id="speakButton" type="button" class="btn-sidebar">읽기</button>
+                    <button id="stopButton" type="button" class="btn-sidebar btn-danger">정지</button>
+                </div>
             </div>
 
+            <div class="nav-divider"></div>
+
             <div class="nav-section">
-                <label class="section-title">Navigation</label>
+                <label class="section-title">현재 / 전체 페이지</label>
                 <div class="page-info">
                     <span id="currentPage">0</span> / <span id="totalPage">0</span>
                 </div>
                 <div class="page-controls">
+                    <button id="firstBtn" type="button" class="btn-sidebar">처음</button>
                     <button id="prevBtn" type="button" class="btn-sidebar">이전</button>
                     <button id="nextBtn" type="button" class="btn-sidebar">다음</button>
+                    <button id="lastBtn" type="button" class="btn-sidebar">끝</button>
                 </div>
             </div>
 
+            <div class="nav-divider"></div>
+
             <div class="nav-section">
-                <label class="section-title">Settings</label>
-                <button id="saveBtn" type="button" class="btn-sidebar">위치 저장</button>
-                <input type="file" id="configInput" accept=".json" hidden>
-                <button id="loadConfigBtn" type="button" class="btn-sidebar">위치 로드</button>
+                <label class="section-title">책갈피</label>
+                <div class="control-group">
+                    <button id="saveBookMarkBtn" type="button" class="btn-sidebar">현재 위치 저장</button>
+                    <input type="file" id="configInput" accept=".json" hidden>
+                    <button id="loadBookMarkBtn" type="button" class="btn-sidebar">이전 위치 로드</button>
+                </div>
             </div>
 
             <div class="nav-bottom">
@@ -49,10 +61,18 @@
         </nav>
 
         <main class="content-area">
+            <div id="progressContainer" class="progress-container">
+                <div class="progress-label">파일 분석 중... (<span id="progressPercent">0</span>%)</div>
+                <div class="progress-bar-bg">
+                    <div id="progressBar" class="progress-bar-fill"></div>
+                </div>
+            </div>
             <div id="display"></div>
         </main>
+        <div id="toastContainer" class="toast toast-hidden"></div>
     </div>
-    <script src="script.js"></script>
+
+    <script src="WebReader.js"></script>
 </body>
 
 </html>
