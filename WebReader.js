@@ -31,12 +31,16 @@ let fullText = "";
 let pagesData = [];
 let VIEW_HEIGHT = 0;
 
-// [최적화] DOM 측정을 하지 않고 문자열을 즉시 자르는 방식 (0.1초 미만)
+// [수정] 글자 수가 아닌 '줄 수' 기준으로 분할하여 짤림 방지
 function splitTextByChunk() {
     pagesData = [];
-    const CHUNK_SIZE = 1000; // 가독성 기준 약 8천 자
-    for (let i = 0; i < fullText.length; i += CHUNK_SIZE) {
-        pagesData.push(fullText.slice(i, i + CHUNK_SIZE));
+    const lines = fullText.split('\n'); // 전체 텍스트를 줄 단위로 분리
+    const LINES_PER_PAGE = 20; // 한 페이지에 표시할 적정 줄 수 (화면 크기에 따라 조절)
+
+    for (let i = 0; i < lines.length; i += LINES_PER_PAGE) {
+        // 지정된 줄 수만큼 잘라서 합침
+        const chunk = lines.slice(i, i + LINES_PER_PAGE).join('\n');
+        pagesData.push(chunk);
     }
     el.totalPage.textContent = pagesData.length;
 }

@@ -185,25 +185,27 @@ html {
 /* ====================================================================
    페이지 프레임 스타일
 =======================================================================*/
-.page-frame {
+/* .page-frame {
     width: 100%;
     min-height: calc(100vh - 120px);
     margin-bottom: 100px;
     white-space: pre-wrap;
     word-break: break-all;
     contain: layout;
-}
+} */
 
+/* style.css 수정 */
 .page-frame {
     width: 100%;
-    height: calc(100vh - 120px);
-    /* min-height 대신 고정 height 권장 */
+    /* height 대신 min-height를 사용하여 내용이 많아도 잘리지 않게 함 */
+    min-height: calc(100vh - 120px);
     margin-bottom: 100px;
     white-space: pre-wrap;
     word-break: break-all;
-    contain: strict;
-    /* 레이아웃 격리로 렌더링 속도 비약적 향상 */
-    overflow: hidden;
+    contain: layout;
+    /* strict에서 layout으로 변경하여 유동적 높이 허용 */
+    overflow: visible;
+    /* 숨겨진 텍스트가 보이도록 설정 */
 }
 
 /* Toast Notification */
